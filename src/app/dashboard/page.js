@@ -50,13 +50,25 @@ export default function DashboardPage() {
   const researchCategories = {};
   researchArticles.forEach(a => { researchCategories[a.category] = (researchCategories[a.category] || 0) + 1; });
 
+  // Collect all links from uploads
+  const allLinks = [];
+  uploads.forEach(u => {
+    (u.links || []).forEach(lnk => {
+      allLinks.push({ ...lnk, fromFile: u.file_name || u.title, fromDate: u.created_at });
+    });
+  });
+  // Also collect research article URLs
+  researchArticles.forEach(a => {
+    if (a.url) allLinks.push({ url: a.url, description: a.title, fromFile: a.source || 'Research', fromDate: a.created_at || a.date });
+  });
+
   const stats = [
     { label: 'Tamil Characters', value: 247, suffix: '', icon: '🔤' },
     { label: 'Best Print Accuracy', value: 97, suffix: '%', icon: '🎯' },
     { label: 'Group Uploads', value: uploads.length, suffix: '', icon: '📤' },
     { label: 'Research Articles', value: researchArticles.length, suffix: '', icon: '📰' },
     { label: 'OCR Engines Tracked', value: benchmarks.length, suffix: '', icon: '⚙️' },
-    { label: 'Links Extracted', value: uploads.reduce((acc, u) => acc + ((u.links || []).length), 0), suffix: '', icon: '🔗' },
+    { label: 'Links Collected', value: allLinks.length, suffix: '', icon: '🔗' },
   ];
 
   const [animatedStats, setAnimatedStats] = useState(stats.map(() => 0));
@@ -85,9 +97,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="tabs" id="dashboard-tabs">
-        {['overview', 'contributions', 'benchmarks', 'timeline'].map(tab => (
+        {['overview', 'links', 'contributions', 'benchmarks', 'timeline'].map(tab => (
           <button key={tab} className={`tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'links' ? `🔗 Links (${allLinks.length})` : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>
@@ -206,6 +218,36 @@ export default function DashboardPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Links Tab */}
+      {activeTab === 'links' && (
+        <div>
+          {allLinks.length === 0 ? (
+            <div className="glass-card" style={{ textAlign: 'center', padding: '60px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔗</div>
+              <h3 style={{ fontWeight: 700, marginBottom: '8px' }}>No Links Yet</h3>
+              <p style={{ color: 'var(--text-secondary)' }}>Upload files containing links or browse research to collect links here.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {allLinks.map((lnk, i) => (
+                <a key={i} href={lnk.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                  <div className="glass-card" style={{ cursor: 'pointer', transition: 'border-color 0.2s', padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '12px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: 'var(--accent-secondary)', fontSize: '0.9rem', fontWeight: 600, wordBreak: 'break-all', marginBottom: '4px' }}>↗ {lnk.url}</div>
+                        {lnk.description && <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{lnk.description}</div>}
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px' }}>From: {lnk.fromFile}</div>
+                      </div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>Visit ↗</span>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Contributions Tab */}

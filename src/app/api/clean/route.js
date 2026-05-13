@@ -35,9 +35,9 @@ async function extractTextFromDocx(base64Data) {
 }
 
 async function saveToSupabase(cleaned, fileName, fileType, fileSize, rawContent) {
-  if (!isSupabaseConfigured() || !supabase) return;
+  if (!isSupabaseConfigured() || !supabase) { console.log('Supabase not configured, skipping save'); return; }
   try {
-    await supabase.from('uploads').insert({
+    const row = {
       title: cleaned.title,
       summary: cleaned.summary,
       key_points: cleaned.keyPoints || [],
@@ -46,11 +46,27 @@ async function saveToSupabase(cleaned, fileName, fileType, fileSize, rawContent)
       file_name: fileName || 'Text Input',
       file_type: fileType || 'text/plain',
       file_size: fileSize || 0,
-      raw_content: rawContent || '',
-      links: cleaned.links || [],
-    });
+    };
+    // Add optional columns (may not exist if user hasn't run schema update)
+    if (rawContent) row.raw_content = rawContent;
+    if (cleaned.links?.length > 0) row.links = cleaned.links;
+
+    const { error } = await supabase.from('uploads').insert(row);
+    if (error) {
+      console.error('Supabase insert error:', error.message);
+      // Retry without optional columns
+      if (error.message.includes('raw_content') || error.message.includes('links')) {
+        delete row.raw_content;
+        delete row.links;
+        const { error: retryErr } = await supabase.from('uploads').insert(row);
+        if (retryErr) console.error('Supabase retry error:', retryErr.message);
+        else console.log('Saved without optional columns');
+      }
+    } else {
+      console.log('Saved to Supabase:', cleaned.title);
+    }
   } catch (err) {
-    console.error('Supabase save error:', err);
+    console.error('Supabase save exception:', err);
   }
 }
 
