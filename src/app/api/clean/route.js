@@ -2,6 +2,9 @@ import { askGemini, askGeminiWithFile } from '@/lib/gemini';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import mammoth from 'mammoth';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Allow up to 60s for large file AI parsing
+
 const GEMINI_SUPPORTED_MIME = [
   'image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/heic', 'image/heif',
   'application/pdf',

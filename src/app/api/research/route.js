@@ -1,6 +1,9 @@
 import { askGemini } from '@/lib/gemini';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 const FALLBACK_ARTICLES = [
   { title: 'Tamil Script — Wikipedia', summary: 'Tamil script is an abugida script used to write the Tamil language. It has 12 vowels, 18 consonants, and one special character (āytam), combining to form 247 characters.', source: 'Wikipedia', date: '2026-01', category: 'research', relevance: 10, url: 'https://en.wikipedia.org/wiki/Tamil_script' },
   { title: 'Optical Character Recognition — Wikipedia', summary: 'OCR is the electronic or mechanical conversion of images of text into machine-encoded text. Modern OCR systems use neural networks and deep learning for improved accuracy.', source: 'Wikipedia', date: '2026-01', category: 'research', relevance: 9, url: 'https://en.wikipedia.org/wiki/Optical_character_recognition' },
