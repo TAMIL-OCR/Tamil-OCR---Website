@@ -110,13 +110,21 @@ export default function DashboardPage() {
           {/* Stats Grid */}
           <div className="stats-banner" style={{ marginBottom: '32px' }}>
             <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
-              {stats.map((s, i) => (
-                <div className="stat-item" key={i} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>{s.icon}</div>
-                  <div className="stat-value">{animatedStats[i]}{s.suffix}</div>
-                  <div className="stat-label">{s.label}</div>
-                </div>
-              ))}
+              {stats.map((s, i) => {
+                const clickMap = { 'Links Collected': 'links', 'Group Uploads': 'contributions', 'OCR Engines Tracked': 'benchmarks' };
+                const tabTarget = clickMap[s.label];
+                return (
+                  <div className="stat-item" key={i} style={{ textAlign: 'center', cursor: tabTarget ? 'pointer' : 'default', transition: 'transform 0.2s' }}
+                    onClick={() => tabTarget && setActiveTab(tabTarget)}
+                    onMouseEnter={(e) => tabTarget && (e.currentTarget.style.transform = 'scale(1.05)')}
+                    onMouseLeave={(e) => tabTarget && (e.currentTarget.style.transform = 'scale(1)')}>
+                    <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>{s.icon}</div>
+                    <div className="stat-value">{animatedStats[i]}{s.suffix}</div>
+                    <div className="stat-label">{s.label}</div>
+                    {tabTarget && <div style={{ fontSize: '0.7rem', color: 'var(--accent-secondary)', marginTop: '2px' }}>Click to view →</div>}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
