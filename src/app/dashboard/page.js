@@ -21,46 +21,48 @@ const timelineData = [
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [uploads, setUploads] = useState([]);
-  const [loadingUploads, setLoadingUploads] = useState(true);
-  const [dynamicStats, setDynamicStats] = useState({
-    totalUploads: 0,
-    categories: { research: 0, statistics: 0, training: 0, general: 0 },
-  });
+  const [researchArticles, setResearchArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchUploads();
+    fetchAll();
   }, []);
 
-  const fetchUploads = async () => {
-    setLoadingUploads(true);
+  const fetchAll = async () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/clean');
-      const data = await res.json();
-      const items = data.uploads || [];
-      setUploads(items);
-
-      // Compute dynamic stats
-      const cats = { research: 0, statistics: 0, training: 0, general: 0 };
-      items.forEach(u => { if (cats[u.category] !== undefined) cats[u.category]++; });
-      setDynamicStats({ totalUploads: items.length, categories: cats });
-    } catch {
-      setUploads([]);
-    } finally {
-      setLoadingUploads(false);
-    }
+      const [uploadRes, researchRes] = await Promise.all([
+        fetch('/api/clean'),
+        fetch('/api/research'),
+      ]);
+      const uploadData = await uploadRes.json();
+      const researchData = await researchRes.json();
+      setUploads(uploadData.uploads || []);
+      setResearchArticles(researchData.articles || []);
+    } catch { /* silent */ }
+    setLoading(false);
   };
 
-  const staticStats = [
-    { label: 'Tamil Characters', value: 247, suffix: '' },
-    { label: 'Print Accuracy', value: 96, suffix: '%' },
-    { label: 'Group Uploads', value: dynamicStats.totalUploads, suffix: '' },
-    { label: 'Research Items', value: dynamicStats.categories.research, suffix: '' },
+  // Compute stats
+  const uploadCategories = { research: 0, statistics: 0, training: 0, general: 0 };
+  uploads.forEach(u => { if (uploadCategories[u.category] !== undefined) uploadCategories[u.category]++; });
+
+  const researchCategories = {};
+  researchArticles.forEach(a => { researchCategories[a.category] = (researchCategories[a.category] || 0) + 1; });
+
+  const stats = [
+    { label: 'Tamil Characters', value: 247, suffix: '', icon: '🔤' },
+    { label: 'Best Print Accuracy', value: 97, suffix: '%', icon: '🎯' },
+    { label: 'Group Uploads', value: uploads.length, suffix: '', icon: '📤' },
+    { label: 'Research Articles', value: researchArticles.length, suffix: '', icon: '📰' },
+    { label: 'OCR Engines Tracked', value: benchmarks.length, suffix: '', icon: '⚙️' },
+    { label: 'Links Extracted', value: uploads.reduce((acc, u) => acc + ((u.links || []).length), 0), suffix: '', icon: '🔗' },
   ];
 
-  const [animatedStats, setAnimatedStats] = useState(staticStats.map(() => 0));
+  const [animatedStats, setAnimatedStats] = useState(stats.map(() => 0));
 
   useEffect(() => {
-    const timers = staticStats.map((stat, i) => {
+    const timers = stats.map((stat, i) => {
       const increment = Math.max(stat.value / 40, 0.5);
       let current = 0;
       return setInterval(() => {
@@ -69,21 +71,17 @@ export default function DashboardPage() {
           current = stat.value;
           clearInterval(timers[i]);
         }
-        setAnimatedStats(prev => {
-          const next = [...prev];
-          next[i] = Math.round(current);
-          return next;
-        });
+        setAnimatedStats(prev => { const next = [...prev]; next[i] = Math.round(current); return next; });
       }, 30);
     });
     return () => timers.forEach(t => clearInterval(t));
-  }, [dynamicStats]);
+  }, [uploads.length, researchArticles.length]);
 
   return (
     <div className="container">
       <div className="page-header" id="dashboard-header">
         <h1>Analytics <span className="gradient-text">Dashboard</span></h1>
-        <p>Live statistics combining Tamil OCR research data and your group&apos;s uploaded contributions.</p>
+        <p>Live statistics combining Tamil OCR benchmarks, your group&apos;s uploads, and auto-collected research data.</p>
       </div>
 
       <div className="tabs" id="dashboard-tabs">
@@ -97,10 +95,12 @@ export default function DashboardPage() {
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <>
+          {/* Stats Grid */}
           <div className="stats-banner" style={{ marginBottom: '32px' }}>
-            <div className="stats-grid">
-              {staticStats.map((s, i) => (
-                <div className="stat-item" key={i}>
+            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
+              {stats.map((s, i) => (
+                <div className="stat-item" key={i} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>{s.icon}</div>
                   <div className="stat-value">{animatedStats[i]}{s.suffix}</div>
                   <div className="stat-label">{s.label}</div>
                 </div>
@@ -109,8 +109,61 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid-2">
+            {/* Upload Categories */}
             <div className="glass-card">
-              <h3 style={{ marginBottom: '16px', fontWeight: 700 }}>Script Breakdown</h3>
+              <h3 style={{ marginBottom: '16px', fontWeight: 700 }}>📤 Upload Categories</h3>
+              {loading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><div className="spinner"></div></div>
+              ) : uploads.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📤</div>No uploads yet.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {Object.entries(uploadCategories).map(([cat, count]) => (
+                    <div key={cat}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.88rem' }}>
+                        <span style={{ textTransform: 'capitalize' }}>{cat}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{count}</span>
+                      </div>
+                      <div style={{ height: '6px', background: 'var(--bg-primary)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${uploads.length > 0 ? (count / uploads.length) * 100 : 0}%`, background: 'var(--accent-gradient)', borderRadius: '3px', transition: 'width 1s ease' }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Research Categories */}
+            <div className="glass-card">
+              <h3 style={{ marginBottom: '16px', fontWeight: 700 }}>📰 Research Categories</h3>
+              {loading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><div className="spinner"></div></div>
+              ) : researchArticles.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📰</div>No research articles yet.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {Object.entries(researchCategories).map(([cat, count]) => (
+                    <div key={cat}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.88rem' }}>
+                        <span style={{ textTransform: 'capitalize' }}>{cat}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{count}</span>
+                      </div>
+                      <div style={{ height: '6px', background: 'var(--bg-primary)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${researchArticles.length > 0 ? (count / researchArticles.length) * 100 : 0}%`, background: 'linear-gradient(90deg, #a855f7, #3b82f6)', borderRadius: '3px', transition: 'width 1s ease' }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Tamil Script Breakdown */}
+            <div className="glass-card">
+              <h3 style={{ marginBottom: '16px', fontWeight: 700 }}>🔤 Tamil Script Breakdown</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {[
                   { label: 'Vowels (உயிர்)', count: 12, pct: 5 },
@@ -124,27 +177,28 @@ export default function DashboardPage() {
                       <span style={{ color: 'var(--text-muted)' }}>{item.count}</span>
                     </div>
                     <div style={{ height: '6px', background: 'var(--bg-primary)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${item.pct}%`, background: 'var(--accent-gradient)', borderRadius: '3px', transition: 'width 1s ease' }}></div>
+                      <div style={{ height: '100%', width: `${item.pct}%`, background: 'linear-gradient(90deg, #f59e0b, #ef4444)', borderRadius: '3px', transition: 'width 1s ease' }}></div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Recent Activity */}
             <div className="glass-card">
-              <h3 style={{ marginBottom: '16px', fontWeight: 700 }}>Upload Categories</h3>
-              {loadingUploads ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><div className="spinner"></div></div>
-              ) : dynamicStats.totalUploads === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📤</div>
-                  No uploads yet. Go to Upload page to contribute!
-                </div>
+              <h3 style={{ marginBottom: '16px', fontWeight: 700 }}>🕐 Recent Activity</h3>
+              {uploads.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No activity yet.</div>
               ) : (
-                <div className="bar-chart" style={{ marginBottom: '40px' }}>
-                  {Object.entries(dynamicStats.categories).map(([cat, count]) => (
-                    <div key={cat} className="bar" style={{ height: `${Math.max(count * 40, 20)}px` }}>
-                      <span className="bar-value">{count}</span>
-                      <span className="bar-label">{cat}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {uploads.slice(0, 5).map((u, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'start', padding: '8px 0', borderBottom: i < 4 ? '1px solid var(--border-glass)' : 'none' }}>
+                      <span style={{ fontSize: '1.1rem' }}>📄</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.title}</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{u.file_name} • {new Date(u.created_at).toLocaleDateString()}</div>
+                      </div>
+                      <span style={{ padding: '2px 8px', background: 'rgba(201,48,44,0.1)', borderRadius: '50px', fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: 600 }}>{u.category}</span>
                     </div>
                   ))}
                 </div>
@@ -157,7 +211,7 @@ export default function DashboardPage() {
       {/* Contributions Tab */}
       {activeTab === 'contributions' && (
         <div>
-          {loadingUploads ? (
+          {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><div className="spinner"></div></div>
           ) : uploads.length === 0 ? (
             <div className="glass-card" style={{ textAlign: 'center', padding: '60px' }}>
@@ -172,13 +226,9 @@ export default function DashboardPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                     <div>
                       <h3 style={{ fontWeight: 700, marginBottom: '4px' }}>{u.title}</h3>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        📁 {u.file_name} • 📅 {new Date(u.created_at).toLocaleDateString()}
-                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>📁 {u.file_name} • 📅 {new Date(u.created_at).toLocaleDateString()}</div>
                     </div>
-                    <span style={{ padding: '4px 10px', background: 'rgba(201,48,44,0.1)', border: '1px solid rgba(201,48,44,0.2)', borderRadius: '50px', fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
-                      {u.category}
-                    </span>
+                    <span style={{ padding: '4px 10px', background: 'rgba(201,48,44,0.1)', border: '1px solid rgba(201,48,44,0.2)', borderRadius: '50px', fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 600 }}>{u.category}</span>
                   </div>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.7', marginBottom: '12px' }}>{u.summary}</p>
                   {u.key_points && u.key_points.length > 0 && (
@@ -200,20 +250,22 @@ export default function DashboardPage() {
       {/* Benchmarks Tab */}
       {activeTab === 'benchmarks' && (
         <div className="glass-card">
-          <h3 style={{ marginBottom: '20px', fontWeight: 700 }}>OCR Engine Benchmarks (Tamil)</h3>
-          <table className="data-table">
-            <thead><tr><th>Engine</th><th>Printed (%)</th><th>Handwritten (%)</th><th>Historical (%)</th></tr></thead>
-            <tbody>
-              {benchmarks.map((b, i) => (
-                <tr key={i}>
-                  <td style={{ fontWeight: 600 }}>{b.name}</td>
-                  <td><span style={{ color: b.print >= 95 ? 'var(--success)' : 'var(--text-primary)' }}>{b.print}%</span></td>
-                  <td><span style={{ color: b.handwritten >= 80 ? 'var(--success)' : 'var(--accent-secondary)' }}>{b.handwritten}%</span></td>
-                  <td><span style={{ color: b.historical >= 70 ? 'var(--success)' : 'var(--accent-primary)' }}>{b.historical}%</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <h3 style={{ marginBottom: '20px', fontWeight: 700 }}>⚙️ OCR Engine Benchmarks (Tamil)</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table">
+              <thead><tr><th>Engine</th><th>Printed (%)</th><th>Handwritten (%)</th><th>Historical (%)</th></tr></thead>
+              <tbody>
+                {benchmarks.map((b, i) => (
+                  <tr key={i}>
+                    <td style={{ fontWeight: 600 }}>{b.name}</td>
+                    <td><span style={{ color: b.print >= 95 ? 'var(--success)' : 'var(--text-primary)' }}>{b.print}%</span></td>
+                    <td><span style={{ color: b.handwritten >= 80 ? 'var(--success)' : 'var(--accent-secondary)' }}>{b.handwritten}%</span></td>
+                    <td><span style={{ color: b.historical >= 70 ? 'var(--success)' : 'var(--accent-primary)' }}>{b.historical}%</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
