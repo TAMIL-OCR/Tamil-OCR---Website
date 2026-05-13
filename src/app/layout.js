@@ -1,7 +1,6 @@
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import AIChat from '@/components/AIChat';
 
 export const metadata = {
   title: 'Tamil OCR Hub — Collaborative Learning Platform',
@@ -16,7 +15,6 @@ export default function RootLayout({ children }) {
         <Navbar />
         <main>{children}</main>
         <Footer />
-        <AIChat />
       </body>
     </html>
   );
