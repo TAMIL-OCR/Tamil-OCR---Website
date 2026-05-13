@@ -16,7 +16,7 @@ Analyze the provided content and:
 1. Clean and fix any formatting issues, typos, or encoding errors
 2. Structure it into a clear, organized format
 3. Extract key facts, statistics, and findings
-4. Extract ALL URLs/links found in the content
+4. Extract ALL URLs/links found in the content (including YouTube links, video links, social media, articles, etc.)
 5. If URLs are found, briefly describe what each link points to
 6. Return the result as a JSON object with these fields:
    - "title": a concise title for this data

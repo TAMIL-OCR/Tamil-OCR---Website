@@ -51,16 +51,21 @@ export default function DashboardPage() {
   researchArticles.forEach(a => { researchCategories[a.category] = (researchCategories[a.category] || 0) + 1; });
 
   // Collect all links from uploads
-  const allLinks = [];
+  const allLinksMap = new Map();
   uploads.forEach(u => {
     (u.links || []).forEach(lnk => {
-      allLinks.push({ ...lnk, fromFile: u.file_name || u.title, fromDate: u.created_at });
+      if (!allLinksMap.has(lnk.url)) {
+        allLinksMap.set(lnk.url, { ...lnk, fromFile: u.file_name || u.title, fromDate: u.created_at });
+      }
     });
   });
   // Also collect research article URLs
   researchArticles.forEach(a => {
-    if (a.url) allLinks.push({ url: a.url, description: a.title, fromFile: a.source || 'Research', fromDate: a.created_at || a.date });
+    if (a.url && !allLinksMap.has(a.url)) {
+      allLinksMap.set(a.url, { url: a.url, description: a.title, fromFile: a.source || 'Research', fromDate: a.created_at || a.date });
+    }
   });
+  const allLinks = Array.from(allLinksMap.values());
 
   const stats = [
     { label: 'Tamil Characters', value: 247, suffix: '', icon: '🔤' },
