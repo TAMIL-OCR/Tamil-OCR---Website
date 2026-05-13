@@ -70,20 +70,15 @@ export default function ResearchPage() {
         <div className="grid-2">
           {filtered.map((article, i) => {
             const colors = categoryColors[article.category] || categoryColors.news;
-            const hasUrl = article.url && article.url.startsWith('http');
-            
-            const CardWrapper = hasUrl ? 'a' : 'div';
-            const cardProps = hasUrl ? {
-              href: article.url,
-              target: '_blank',
-              rel: 'noopener noreferrer',
-              style: { textDecoration: 'none', color: 'inherit', display: 'block' },
-            } : {};
+            // Always generate a link — use real URL or fallback to Google search
+            const articleUrl = (article.url && article.url.startsWith('http'))
+              ? article.url
+              : `https://www.google.com/search?q=${encodeURIComponent(article.title + ' Tamil OCR')}`;
 
             return (
-              <CardWrapper key={i} {...cardProps}>
+              <a key={i} href={articleUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                 <div className="glass-card" style={{
-                  cursor: hasUrl ? 'pointer' : 'default',
+                  cursor: 'pointer',
                   transition: 'all 0.3s ease',
                   height: '100%',
                   position: 'relative',
@@ -109,14 +104,10 @@ export default function ResearchPage() {
                   {/* Footer */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-glass)', paddingTop: '12px' }}>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>📰 {article.source}</span>
-                    {hasUrl ? (
-                      <span style={{ fontSize: '0.8rem', color: colors.text, fontWeight: 600 }}>Visit Source ↗</span>
-                    ) : (
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Relevance: {article.relevance}/10</span>
-                    )}
+                    <span style={{ fontSize: '0.8rem', color: colors.text, fontWeight: 600 }}>Visit Source ↗</span>
                   </div>
                 </div>
-              </CardWrapper>
+              </a>
             );
           })}
         </div>
