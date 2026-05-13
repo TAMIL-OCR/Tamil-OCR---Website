@@ -10,6 +10,7 @@ const links = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/upload', label: 'Upload' },
   { href: '/research', label: 'Research' },
+  { href: '/ai', label: 'Ask AI' },
 ];
 
 export default function Navbar() {
